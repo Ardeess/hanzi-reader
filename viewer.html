@@ -84,7 +84,8 @@
       </label>
       <label class="field">Модель
         <div class="row">
-          <select id="model"><option value="">Первая загруженная</option></select>
+          <input type="text" id="model" list="modelList" placeholder="пусто — первая загруженная" autocomplete="off">
+          <datalist id="modelList"></datalist>
           <button class="btn" id="refreshModels" title="Обновить список">↻</button>
         </div>
       </label>
@@ -98,7 +99,8 @@
         <button class="btn primary" id="testLlm">Проверить</button>
         <span id="llmTestResult" class="muted small"></span>
       </div>
-      <p class="muted small">В LM Studio: вкладка Developer → Start Server, модель должна быть загружена.</p>
+      <p class="muted small">LM Studio: вкладка Developer → Start Server, модель должна быть загружена.<br>
+        DeepSeek: адрес <code>https://api.deepseek.com</code>, модель <code>deepseek-flash</code>, ключ с platform.deepseek.com.</p>
     </section>
 
     <section>

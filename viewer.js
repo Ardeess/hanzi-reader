@@ -306,18 +306,13 @@ function openSettings() {
 }
 
 async function fillModels() {
-  const sel = $("model");
-  const current = settings.model;
+  const list = $("modelList");
+  $("model").value = settings.model || "";
   try {
     const models = await listModels(settings);
-    sel.replaceChildren(new Option("Первая загруженная", ""));
-    for (const m of models) sel.append(new Option(m, m));
-    if (current && !models.includes(current)) sel.append(new Option(current, current));
-    sel.value = current;
+    list.replaceChildren(...models.map((m) => new Option(m, m)));
   } catch {
-    sel.replaceChildren(new Option("Первая загруженная", ""));
-    if (current) sel.append(new Option(current, current));
-    sel.value = current;
+    list.replaceChildren();
   }
 }
 
@@ -337,7 +332,7 @@ function bindSettings() {
   $("endpoint").onchange = (e) => { update({ endpoint: e.target.value.trim() || "http://localhost:1234/v1" }); fillModels(); };
   $("targetLang").onchange = (e) => update({ targetLang: e.target.value.trim() || "русский" });
   $("apiKey").onchange = (e) => update({ apiKey: e.target.value.trim() });
-  $("model").onchange = (e) => update({ model: e.target.value });
+  $("model").onchange = (e) => update({ model: e.target.value.trim() });
   $("autoOpen").onchange = (e) => update({ autoOpen: e.target.checked });
   for (const k of ["ytOverlay", "ytPinyin", "ytToneColors", "ytPauseOnSelect", "ytPauseOnHover"]) {
     $(k).checked = !!settings[k];

@@ -180,6 +180,6 @@ kbd {
   font: inherit; font-size: 14px; color: var(--text);
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
 }
-.settings .field .row select { flex: 1; width: auto; margin-top: 0; }
+.settings .field .row select, .settings .field .row input { flex: 1; width: auto; margin-top: 0; }
 .settings .check { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 6px 0; }
 .settings progress { width: 100%; margin-top: 8px; }
