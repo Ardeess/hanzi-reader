@@ -58,6 +58,33 @@ export function resetModelCache() {
   modelCache = null;
 }
 
+// ---------- Защита от ответа не на том языке ----------
+// Некоторые модели (особенно DeepSeek через посредников) иногда отвечают по-китайски
+// или повторяют исходный текст. Такой ответ не показываем и переспрашиваем.
+
+const HAN = /\p{Script=Han}/gu;
+const LETTER = /[\p{L}]/gu;
+
+export function mostlyChinese(s) {
+  if (!s) return false;
+  const letters = (s.match(LETTER) || []).length;
+  if (!letters) return false;
+  const han = (s.match(HAN) || []).length;
+  return han / letters > 0.3;
+}
+
+function langRule(lang) {
+  return `Отвечай ТОЛЬКО на языке «${lang}». Не пиши по-китайски, не повторяй исходный китайский текст, ` +
+    `не рассуждай и не объясняй — сразу дай ответ.`;
+}
+
+function retryNote(lang) {
+  return {
+    role: "system",
+    content: `Предыдущий ответ был на китайском языке — это ошибка. Ответ должен быть полностью на языке «${lang}».`,
+  };
+}
+
 function buildMessages(text, mode, lang) {
   if (mode === "word") {
     return [
@@ -66,9 +93,9 @@ function buildMessages(text, mode, lang) {
         content:
           `Ты — словарь для изучающих китайский язык. ` +
           `Дай краткий перевод китайского слова на ${lang} язык: 1–4 основных значения через точку с запятой. ` +
-          `Без пиньиня, без пояснений, без кавычек.`,
+          `Без пиньиня, без пояснений, без кавычек. ` + langRule(lang),
       },
-      { role: "user", content: text },
+      { role: "user", content: `Переведи на ${lang} язык слово: ${text}` },
     ];
   }
   return [
@@ -76,9 +103,9 @@ function buildMessages(text, mode, lang) {
       role: "system",
       content:
         `Ты — переводчик с китайского на ${lang} язык. ` +
-        `Переведи текст точно и естественно. Выведи только перевод, без пиньиня и комментариев.`,
+        `Переведи текст точно и естественно. Выведи только перевод, без пиньиня и комментариев. ` + langRule(lang),
     },
-    { role: "user", content: text },
+    { role: "user", content: `Переведи на ${lang} язык:\n${text}` },
   ];
 }
 
@@ -87,8 +114,32 @@ function buildMessages(text, mode, lang) {
  * Возвращает итоговый текст. signal — AbortSignal для отмены.
  */
 export async function translate(text, mode, settings, onChunk, signal) {
-  return chat(buildMessages(text, mode, settings.targetLang), mode === "word" ? 120 : 1500,
-    settings, onChunk, signal);
+  const messages = buildMessages(text, mode, settings.targetLang);
+  const maxTokens = mode === "word" ? 120 : 1500;
+  // Пока ответ похож на китайский, не показываем его.
+  const show = (p) => { if (!mostlyChinese(p)) onChunk?.(p); };
+  let out = await chat(messages, maxTokens, settings, show, signal);
+  for (let attempt = 0; attempt < 2 && mostlyChinese(out); attempt++) {
+    out = await chat([...messages, { role: "assistant", content: out }, retryNote(settings.targetLang)],
+      maxTokens, settings, show, signal);
+  }
+  if (mostlyChinese(out)) throw new Error("модель ответила по-китайски, попробуйте ещё раз или другую модель");
+  return out;
+}
+
+// Общая логика для ответов вида «ключ = значение»: плохие значения отбрасываем,
+// если плохих много — переспрашиваем.
+async function keyValueChat(messages, maxTokens, settings, parse, total, onPartial, signal) {
+  const clean = (map) => new Map([...map].filter(([, v]) => !mostlyChinese(v)));
+  const bad = (raw, map) => mostlyChinese(raw.replace(/^.*?=/gm, "")) || (total > 0 && map.size < total / 2);
+  let raw = await chat(messages, maxTokens, settings, (p) => onPartial?.(clean(parse(p))), signal);
+  let map = clean(parse(raw));
+  if (bad(raw, map)) {
+    const raw2 = await chat([...messages, { role: "assistant", content: raw }, retryNote(settings.targetLang)],
+      maxTokens, settings, (p) => onPartial?.(new Map([...map, ...clean(parse(p))])), signal);
+    map = new Map([...map, ...clean(parse(raw2))]);
+  }
+  return map;
 }
 
 /**
@@ -105,7 +156,8 @@ export async function glossWords(words, sentence, settings, onPartial, signal) {
         `Для каждого слова дай краткий перевод на ${lang} язык (1–4 слова) именно в значении, ` +
         `в котором оно употреблено в этом предложении. Для служебных частиц кратко укажи функцию ` +
         `(например: «частица принадлежности»). Формат ответа — по одной строке на слово, ` +
-        `строго «слово = перевод», в том же порядке, без нумерации и без пиньиня.`,
+        `строго «слово = перевод», в том же порядке, без нумерации и без пиньиня. ` +
+        `Слева от «=» — китайское слово как есть, справа — перевод ТОЛЬКО на языке «${lang}».`,
     },
     { role: "user", content: `Предложение: ${sentence}\nСлова:\n${words.join("\n")}` },
   ];
@@ -117,9 +169,7 @@ export async function glossWords(words, sentence, settings, onPartial, signal) {
     }
     return map;
   };
-  const full = await chat(messages, 60 + words.length * 30, settings,
-    (partial) => onPartial?.(parse(partial)), signal);
-  return parse(full);
+  return keyValueChat(messages, 60 + words.length * 30, settings, parse, words.length, onPartial, signal);
 }
 
 /**
@@ -136,7 +186,7 @@ export async function translateDefs(word, items, settings, onPartial, signal) {
         `Тебе дают китайское слово и пронумерованные английские значения. Переведи каждое значение ` +
         `кратко и точно, как в словаре, учитывая, что это значение именно этого китайского слова. ` +
         `Пояснения в скобках тоже переведи. Формат — по строке на значение, строго «номер = перевод», ` +
-        `с теми же номерами и в том же порядке, без пиньиня и комментариев.`,
+        `с теми же номерами и в том же порядке, без пиньиня и комментариев. ` + langRule(lang),
     },
     { role: "user", content: `Слово: ${word}\n${items.map((i) => `${i.id} = ${i.text}`).join("\n")}` },
   ];
@@ -148,9 +198,7 @@ export async function translateDefs(word, items, settings, onPartial, signal) {
     }
     return map;
   };
-  const full = await chat(messages, 80 + items.length * 40, settings,
-    (partial) => onPartial?.(parse(partial)), signal);
-  return parse(full);
+  return keyValueChat(messages, 80 + items.length * 40, settings, parse, items.length, onPartial, signal);
 }
 
 async function chat(messages, maxTokens, settings, onChunk, signal) {
@@ -207,5 +255,8 @@ async function chat(messages, maxTokens, settings, onChunk, signal) {
 
 // Убираем «размышления» reasoning-моделей и лишние пробелы.
 function cleanup(s) {
-  return s.replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trim();
+  return s
+    .replace(/<think>[\s\S]*?(<\/think>|$)/g, "")
+    .replace(/^[\s\S]*?<\/think>/, "") // начало рассуждения могло прийти без открывающего тега
+    .trim();
 }
