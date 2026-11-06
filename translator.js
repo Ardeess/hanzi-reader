@@ -165,6 +165,9 @@ async function chat(messages, maxTokens, settings, onChunk, signal) {
       temperature: 0.2,
       max_tokens: maxTokens,
       stream: true,
+      // DeepSeek V4: без «размышлений» ответ приходит заметно быстрее,
+      // и рассуждения на китайском не попадают в перевод.
+      ...(/deepseek/i.test(model) ? { thinking: { type: "disabled" } } : {}),
     }),
   });
   if (!res.ok) {
