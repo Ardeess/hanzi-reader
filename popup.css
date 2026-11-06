@@ -1,0 +1,80 @@
+/* Подсказка Hanzi Reader — общая для читалки PDF и YouTube. */
+:host {
+  --surface: #282724; --surface-2: #32302c; --text: #ece8df; --muted: #a19c90;
+  --line: #3e3b36; --accent: #e0574d; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --t1: #ff6b5f; --t2: #f0a04b; --t3: #5cc77a; --t4: #6ea3ff; --t5: #a19c90;
+  --hanzi-font: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --ui-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  all: initial;
+}
+[hidden] { display: none !important; }
+.popup, .popup * { box-sizing: border-box; }
+.popup a { color: var(--accent); }
+.popup .muted { color: var(--muted); }
+.popup .small { font-size: 12px; line-height: 1.45; }
+
+/* ---------- Подсказка ---------- */
+.popup {
+  position: fixed; z-index: 40;
+  width: 440px;
+  max-height: min(70vh, 560px); overflow: auto;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px 16px 16px;
+  font-family: var(--ui-font); font-size: 14px; line-height: 1.5; text-align: left;
+}
+.popup .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.popup .hz { font-family: var(--hanzi-font); font-size: 34px; line-height: 1.15; }
+.popup .hz-trad { font-family: var(--hanzi-font); font-size: 20px; color: var(--muted); }
+.popup .py { font-size: 18px; letter-spacing: 0.01em; }
+.popup .label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); margin: 12px 0 4px;
+}
+.popup .tr { font-size: 15px; white-space: pre-wrap; }
+.popup .tr.pending { color: var(--muted); }
+.popup .tr.err { color: var(--accent); font-size: 13px; }
+.popup ol.defs { margin: 0; padding-left: 20px; }
+.popup ol.defs li { margin: 1px 0; }
+.popup .entry + .entry { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.popup .entry-py { font-weight: 600; margin-bottom: 2px; }
+.popup .close {
+  position: sticky; float: right; top: 0; margin: -6px -8px 0 8px;
+  border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer;
+}
+
+/* Фраза с пиньинем над словами */
+.popup .ruby-line {
+  font-family: var(--hanzi-font); font-size: 22px; line-height: 2.1;
+  display: flex; flex-wrap: wrap; column-gap: 2px;
+}
+.popup ruby { ruby-align: center; cursor: pointer; border-radius: 4px; padding: 0 1px; }
+.popup ruby:hover, .popup ruby.active { background: var(--surface-2); }
+.popup rt { font-family: var(--ui-font); font-size: 11px; letter-spacing: 0; }
+.popup .seg-detail {
+  margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2);
+}
+.popup .seg-detail .hz { font-size: 22px; }
+.popup .seg-detail .py { font-size: 15px; }
+.popup details summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-top: 12px; }
+.popup .words { margin: 6px 0 0; padding: 0; list-style: none; }
+.popup .words li { padding: 3px 0; border-bottom: 1px solid var(--line); }
+.popup .words li:last-child { border-bottom: 0; }
+.popup .words .w { font-family: var(--hanzi-font); font-size: 17px; margin-right: 6px; }
+.popup .words .p { margin-right: 6px; }
+.popup .words .d { color: var(--muted); }
+.popup .lang-toggle {
+  margin-left: 8px; font-size: 10px; letter-spacing: 0.04em; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; text-decoration: none;
+}
+.popup .lang-toggle:hover { color: var(--text); background: var(--surface-2); }
+.popup .words .ru { color: var(--text); }
+.popup .words .err, .popup .err { color: var(--accent); }
+
+/* Масштаб интерфейса (не влияет на страницы книги) */
+.popup { zoom: var(--ui-zoom, 1); }
+
+.t1 { color: var(--t1); } .t2 { color: var(--t2); } .t3 { color: var(--t3); }
+.t4 { color: var(--t4); } .t5 { color: var(--t5); }
+

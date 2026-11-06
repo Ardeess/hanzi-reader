@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Hanzi PDF Reader</title>
+  <link rel="icon" href="icons/icon48.png">
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="tb-group">
+      <label class="btn primary" title="Открыть PDF с компьютера">
+        <input type="file" id="fileInput" accept="application/pdf,.pdf" hidden>
+        Открыть PDF
+      </label>
+      <span id="docTitle" class="doc-title"></span>
+    </div>
+
+    <div class="tb-group" id="navGroup" hidden>
+      <button class="btn icon" id="prevPage" title="Предыдущая страница">‹</button>
+      <input id="pageInput" class="page-input" type="text" inputmode="numeric" aria-label="Страница">
+      <span class="muted">/ <span id="pageCount">0</span></span>
+      <button class="btn icon" id="nextPage" title="Следующая страница">›</button>
+      <span class="sep"></span>
+      <button class="btn icon" id="zoomOut" title="Уменьшить">−</button>
+      <button class="btn ghost" id="zoomLabel" title="По ширине страницы">100%</button>
+      <button class="btn icon" id="zoomIn" title="Увеличить">+</button>
+    </div>
+
+    <div class="tb-group right">
+      <span id="dictStatus" class="status"></span>
+      <button class="btn icon" id="settingsBtn" title="Настройки">⚙</button>
+    </div>
+  </header>
+
+  <main id="viewer" class="viewer">
+    <section id="emptyState" class="empty">
+      <div class="empty-card">
+        <div class="empty-hanzi">读</div>
+        <h1>Перетащите PDF сюда</h1>
+        <p>или нажмите «Открыть PDF». PDF-ссылки в Chrome тоже будут открываться здесь.</p>
+        <ul class="hints">
+          <li><b>Выделите слово</b> (или дважды щёлкните по нему) — пиньин и значения.</li>
+          <li><b>Выделите фразу или предложение</b> — полный перевод и разбор по словам.</li>
+          <li><kbd>Esc</kbd> закрывает подсказку.</li>
+        </ul>
+        <p id="emptyMsg" class="error" hidden></p>
+      </div>
+    </section>
+    <div id="pages" class="pages"></div>
+  </main>
+
+  <div id="dropOverlay" class="drop-overlay" hidden><div>Отпустите, чтобы открыть PDF</div></div>
+
+
+  <!-- Настройки -->
+  <aside id="settings" class="settings" hidden>
+    <div class="settings-head">
+      <h2>Настройки</h2>
+      <button class="btn icon" id="settingsClose" title="Закрыть">✕</button>
+    </div>
+
+    <section>
+      <h3>Словарь CC-CEDICT</h3>
+      <p id="dictInfo" class="muted">Проверяю…</p>
+      <div class="row">
+        <button class="btn" id="dictDownload">Скачать словарь</button>
+        <label class="btn">
+          <input type="file" id="dictFile" accept=".txt,.gz,.zip,.u8" hidden>
+          Загрузить файл…
+        </label>
+      </div>
+      <progress id="dictProgress" max="1" value="0" hidden></progress>
+      <p class="muted small">Даёт пиньин и значения слов (на английском), работает офлайн.
+        Файл можно скачать вручную на mdbg.net → CC-CEDICT → Download.</p>
+    </section>
+
+    <section>
+      <h3>Перевод через локальную модель</h3>
+      <label class="check"><input type="checkbox" id="llmEnabled"> Переводить через LM Studio</label>
+      <label class="field">Адрес сервера
+        <input type="text" id="endpoint" placeholder="http://localhost:1234/v1">
+      </label>
+      <label class="field">Модель
+        <div class="row">
+          <select id="model"><option value="">Первая загруженная</option></select>
+          <button class="btn" id="refreshModels" title="Обновить список">↻</button>
+        </div>
+      </label>
+      <label class="field">Язык перевода
+        <input type="text" id="targetLang" placeholder="русский">
+      </label>
+      <label class="field">API-ключ (не нужен для LM Studio)
+        <input type="password" id="apiKey" autocomplete="off">
+      </label>
+      <div class="row">
+        <button class="btn primary" id="testLlm">Проверить</button>
+        <span id="llmTestResult" class="muted small"></span>
+      </div>
+      <p class="muted small">В LM Studio: вкладка Developer → Start Server, модель должна быть загружена.</p>
+    </section>
+
+    <section>
+      <h3>Размер интерфейса</h3>
+      <div class="scale-row">
+        <button class="btn icon" id="uiSmaller" title="Меньше">A−</button>
+        <input type="range" id="uiScale" min="0.8" max="1.8" step="0.05">
+        <button class="btn icon" id="uiBigger" title="Больше">A+</button>
+        <output id="uiScaleLabel">100%</output>
+      </div>
+      <p class="muted small">Меняет размер подсказки, панели и настроек. Масштаб самой книги — кнопками − и + на панели.</p>
+    </section>
+
+    <section>
+      <h3>YouTube</h3>
+      <label class="check"><input type="checkbox" id="ytOverlay"> Свои субтитры с выделением вместо субтитров YouTube</label>
+      <label class="check"><input type="checkbox" id="ytPinyin"> Пиньин над субтитрами</label>
+      <label class="check"><input type="checkbox" id="ytToneColors"> Цвет тонов в пиньине</label>
+      <label class="check"><input type="checkbox" id="ytPauseOnSelect"> Пауза при выделении, продолжить после закрытия подсказки</label>
+      <label class="check"><input type="checkbox" id="ytPauseOnHover"> Пауза, пока курсор над субтитрами</label>
+      <p class="muted small">Включите в видео китайские субтитры (кнопка CC). На видео: <kbd>Alt</kbd>+<kbd>P</kbd> — пиньин, <kbd>Alt</kbd>+<kbd>H</kbd> — свои/родные субтитры. Кнопки размера появляются при наведении на субтитры.</p>
+    </section>
+
+    <section>
+      <h3>Прочее</h3>
+      <label class="check"><input type="checkbox" id="autoOpen"> Открывать PDF-ссылки Chrome в этой читалке</label>
+    </section>
+  </aside>
+
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+/* Субтитры Hanzi Reader поверх плеера YouTube (внутри shadow DOM). */
+.subs {
+  position: absolute;
+  left: 50%;
+  bottom: var(--subs-bottom, 9%);
+  transform: translateX(-50%);
+  max-width: 92%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  pointer-events: auto;
+  font-size: var(--subs-font, 28px);
+  font-family: var(--hanzi-font), sans-serif;
+  color: #fff;
+  text-align: center;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+.subs[hidden] { display: none !important; }
+.subs .line {
+  display: inline-block;
+  background: rgba(8, 8, 8, 0.78);
+  border-radius: 0.18em;
+  padding: 0.05em 0.35em 0.1em;
+  line-height: 1.25;
+  white-space: pre-wrap;
+}
+.subs.pinyin .line { line-height: 2.05; padding-top: 0.1em; }
+.subs ruby { ruby-align: center; }
+.subs rt {
+  font-family: var(--ui-font);
+  font-size: 0.42em;
+  letter-spacing: 0;
+  color: #e8e8e8;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.subs:not(.pinyin) rt { display: none; }
+.subs:not(.tones) rt span { color: inherit !important; }
+.subs rt .t1 { color: #ff8a80; } .subs rt .t2 { color: #ffc069; }
+.subs rt .t3 { color: #8fe3a5; } .subs rt .t4 { color: #8db8ff; }
+.subs rt .t5 { color: #c9c5bd; }
+.subs ::selection { background: rgba(224, 87, 77, 0.55); color: #fff; }
+
+/* Мини-панель управления — появляется при наведении на субтитры */
+.subs .ctrl {
+  position: absolute;
+  top: -1.9em;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-family: var(--ui-font);
+  font-size: 13px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.subs:hover .ctrl { opacity: 1; }
+.subs .ctrl button {
+  font: inherit;
+  color: #fff;
+  background: rgba(8, 8, 8, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.subs .ctrl button:hover { background: rgba(60, 60, 60, 0.9); }
+.subs .ctrl button.on { border-color: #e0574d; }
+
+.toast {
+  position: absolute; left: 50%; top: 10%; transform: translateX(-50%);
+  z-index: 61; padding: 6px 12px; border-radius: 8px;
+  background: rgba(8, 8, 8, 0.85); color: #fff; font: 14px var(--ui-font);
+  pointer-events: none;
+}
+
+/* Подсказка поверх субтитров и панели */
+.popup { z-index: 100; }
